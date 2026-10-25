@@ -195,31 +195,30 @@ class AgentCoordinator:
                     )
                     continue
                 
-                # Store for later processing
-                add_operations.append(update)
-                logical_id_map[logical_id] = None  # Will be filled with real card_id
+                card_type_str = update.get("card_type", "planning")
+                try:
+                    card_type = CardType(card_type_str)
+                except ValueError:
+                    card_type = CardType.PLANNING
+
+                card_id = f"{agent_name}_{card_type.value}_{uuid.uuid4().hex[:12]}"
+                add_operations.append((update, card_type, card_id))
+                logical_id_map[logical_id] = card_id
             elif action in ["complete", "update"]:
                 # Non-add operations processed later
                 pass
         
-        # Phase 2: Create all cards and build logical_id → real_id mapping
+        # Phase 2: Create all cards using the preallocated logical_id → card_id mapping
         # Track EXECUTION cards by planning_card_id and step_order for automatic chaining
         execution_by_planning: Dict[str, List[Tuple[int, str]]] = {}  # planning_card_id -> [(step_order, logical_id), ...]
         
-        for update in add_operations:
+        for update, card_type, card_id in add_operations:
             try:
                 # Extract card information
                 title = update.get("title", "")
                 description = update.get("description", "")
                 priority = update.get("priority", "medium")
-                card_type_str = update.get("card_type", "planning")
                 logical_id = update.get("temp_id") or update.get("logical_id")
-                
-                # Parse card_type
-                try:
-                    card_type = CardType(card_type_str)
-                except ValueError:
-                    card_type = CardType.PLANNING
                 
                 # Start with metadata from update (if any), then add priority
                 metadata = update.get("metadata", {}).copy() if "metadata" in update else {}
@@ -262,18 +261,7 @@ class AgentCoordinator:
                     resolved_depends_on = []
                     for dep_id in (depends_on if isinstance(depends_on, list) else [depends_on]):
                         if dep_id in logical_id_map:
-                            # This is a logical_id, need to resolve it
-                            real_id = logical_id_map.get(dep_id)
-                            if real_id:
-                                resolved_depends_on.append(real_id)
-                            else:
-                                # Dependency hasn't been created yet
-                                logger.warning(
-                                    f"Dependency logical_id '{dep_id}' not yet resolved for card '{title}'. "
-                                    f"Ensure dependent cards are listed before cards that depend on them."
-                                )
-                                # Try to find it anyway (in case it was created in previous batch)
-                                resolved_depends_on.append(dep_id)
+                            resolved_depends_on.append(logical_id_map[dep_id])
                         else:
                             # This is already a real card_id or unknown logical_id
                             resolved_depends_on.append(dep_id)
@@ -305,10 +293,8 @@ class AgentCoordinator:
                             f"{target_response_logical_id} → {resolved_response_id[:20]}..."
                         )
                 
-                # Generate UUID-based card_id
-                card_id = f"{agent_name}_{card_type.value}_{uuid.uuid4().hex[:12]}"
-                
-                # Create the card with the generated card_id
+                # Create the card with its preallocated ID so forward references
+                # in this batch can be resolved before any card is created.
                 card = await self._kanban.add_card(
                     agent_name=agent_name,
                     card_type=card_type,
