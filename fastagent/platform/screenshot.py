@@ -52,7 +52,7 @@ class ScreenshotClient:
     @staticmethod
     def _is_valid_image_response(content_type: str, data: Optional[bytes]) -> bool:
         """
-        Validate image response using magic bytes.
+        Validate image response using PNG/JPEG magic bytes, not its header alone.
         
         Args:
             content_type: HTTP Content-Type header
@@ -70,10 +70,6 @@ class ScreenshotClient:
         
         # JPEG magic bytes: \xff\xd8\xff
         if len(data) >= 3 and data[:3] == b"\xff\xd8\xff":
-            return True
-        
-        # Fallback to content-type check
-        if content_type and ("image/png" in content_type or "image/jpeg" in content_type):
             return True
         
         return False

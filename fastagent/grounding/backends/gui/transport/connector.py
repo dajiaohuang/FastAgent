@@ -92,7 +92,7 @@ class GUIConnector(AioHttpConnector):
     
     @staticmethod
     def _is_valid_image_response(content_type: str, data: Optional[bytes]) -> bool:
-        """Validate image response using magic bytes."""
+        """Validate PNG/JPEG response bytes; content type alone is insufficient."""
         if not isinstance(data, (bytes, bytearray)) or not data:
             return False
         # PNG magic
@@ -100,9 +100,6 @@ class GUIConnector(AioHttpConnector):
             return True
         # JPEG magic
         if len(data) >= 3 and data[:3] == b"\xff\xd8\xff":
-            return True
-        # Fallback to content-type
-        if content_type and ("image/png" in content_type or "image/jpeg" in content_type):
             return True
         return False
     
