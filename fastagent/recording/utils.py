@@ -16,10 +16,16 @@ def load_trajectory_from_jsonl(jsonl_path: str) -> List[Dict[str, Any]]:
     
     try:
         with open(jsonl_path, "r", encoding="utf-8") as f:
-            for line in f:
+            for line_number, line in enumerate(f, start=1):
                 line = line.strip()
                 if line:
-                    step = json.loads(line)
+                    try:
+                        step = json.loads(line)
+                    except json.JSONDecodeError as e:
+                        logger.warning(
+                            f"Skipping invalid trajectory record at {jsonl_path}:{line_number}: {e}"
+                        )
+                        continue
                     trajectory.append(step)
         
         logger.info(f"Loaded {len(trajectory)} steps from {jsonl_path}")
