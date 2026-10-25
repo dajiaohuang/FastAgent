@@ -9,10 +9,7 @@ from abc import abstractmethod
 from typing import Any
 
 from mcp import ClientSession
-try:
-    from mcp.shared.exceptions import McpError
-except ImportError:
-    from mcp.shared.exceptions import MCPError as McpError
+from mcp.shared.exceptions import McpError
 from mcp.types import CallToolResult, GetPromptResult, Prompt, ReadResourceResult, Resource, Tool
 
 from fastagent.grounding.core.transport.task_managers import BaseConnectionManager

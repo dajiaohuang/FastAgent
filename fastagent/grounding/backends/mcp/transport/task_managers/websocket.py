@@ -4,12 +4,7 @@ WebSocket connection management for MCP implementations.
 This module provides a connection manager for WebSocket-based MCP connections.
 """
 from typing import Any, Tuple
-
-try:
-    from mcp.client.websocket import websocket_client
-except ImportError:
-    from websockets import connect as websocket_client
-
+from mcp.client.websocket import websocket_client
 from fastagent.utils.logging import Logger
 from fastagent.grounding.core.transport.task_managers import (
     AsyncContextConnectionManager,
